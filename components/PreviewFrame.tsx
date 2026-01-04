@@ -83,6 +83,10 @@ ${html}
       ref={iframeRef}
       className={`w-full h-full border-0 bg-white ${className}`}
       title="Preview"
+      style={{
+        contain: 'strict',
+        isolation: 'isolate',
+      }}
     />
   )
 }

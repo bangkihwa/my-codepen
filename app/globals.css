@@ -159,3 +159,21 @@ body {
 .panel-header-title {
   @apply text-sm font-semibold text-gray-700;
 }
+
+/* GPU 가속 및 리페인트 최적화 */
+.card {
+  will-change: auto;
+  contain: layout style;
+}
+
+/* 미리보기 iframe 안정화 */
+iframe {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 버튼 클릭 시 깜빡임 방지 */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}

@@ -1,74 +1,129 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
+import { useState, useEffect, useCallback, Suspense, useMemo, useRef, memo, useDeferredValue, createContext, useContext } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { slugify, isValidSlug } from '@/lib/slugify'
 import PreviewFrame from '@/components/PreviewFrame'
-import Toast, { useToast } from '@/components/Toast'
+import Toast, { ToastType } from '@/components/Toast'
 
-// 아이콘 컴포넌트
-const CodeIcon = () => (
+// Toast 상태를 위한 Context (리렌더링 격리)
+const ToastContext = createContext<{
+  showToast: (message: string, type?: ToastType) => void
+}>({ showToast: () => {} })
+
+// Toast Provider 컴포넌트 - 에디터와 분리
+const ToastProvider = memo(({ children }: { children: React.ReactNode }) => {
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
+    setToast({ message, type })
+  }, [])
+  const hideToast = useCallback(() => setToast(null), [])
+
+  const contextValue = useMemo(() => ({ showToast }), [showToast])
+
+  return (
+    <ToastContext.Provider value={contextValue}>
+      {children}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+    </ToastContext.Provider>
+  )
+})
+ToastProvider.displayName = 'ToastProvider'
+
+const useToastContext = () => useContext(ToastContext)
+
+// 아이콘 컴포넌트 - memo로 최적화
+const CodeIcon = memo(() => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
   </svg>
-)
+))
+CodeIcon.displayName = 'CodeIcon'
 
-const EyeIcon = () => (
+const EyeIcon = memo(() => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>
-)
+))
+EyeIcon.displayName = 'EyeIcon'
 
-const SaveIcon = () => (
+const SaveIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
   </svg>
-)
+))
+SaveIcon.displayName = 'SaveIcon'
 
-const PublishIcon = () => (
+const PublishIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
   </svg>
-)
+))
+PublishIcon.displayName = 'PublishIcon'
 
-const PlusIcon = () => (
+const PlusIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
   </svg>
-)
+))
+PlusIcon.displayName = 'PlusIcon'
 
-const ListIcon = () => (
+const ListIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
   </svg>
-)
+))
+ListIcon.displayName = 'ListIcon'
 
-const LinkIcon = () => (
+const LinkIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
   </svg>
-)
+))
+LinkIcon.displayName = 'LinkIcon'
 
-const CopyIcon = () => (
+const CopyIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
   </svg>
-)
+))
+CopyIcon.displayName = 'CopyIcon'
 
-const LogoutIcon = () => (
+const LogoutIcon = memo(() => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
   </svg>
-)
+))
+LogoutIcon.displayName = 'LogoutIcon'
+
+// 미리보기 패널 - 별도 컴포넌트로 분리하여 리렌더링 격리
+const PreviewPanel = memo(({ htmlContent }: { htmlContent: string }) => {
+  // useDeferredValue로 미리보기 업데이트 우선순위 낮춤
+  const deferredHtml = useDeferredValue(htmlContent)
+
+  return (
+    <div className="w-1/2 card overflow-hidden flex flex-col" style={{ willChange: 'auto' }}>
+      <div className="panel-header">
+        <EyeIcon />
+        <span className="panel-header-title">미리보기</span>
+        <span className="ml-auto badge badge-info text-xs">실시간</span>
+      </div>
+      <div className="flex-1 bg-white" style={{ contain: 'strict' }}>
+        <PreviewFrame htmlContent={deferredHtml} />
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => prevProps.htmlContent === nextProps.htmlContent)
+PreviewPanel.displayName = 'PreviewPanel'
 
 function EditorContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const slugParam = searchParams.get('slug')
   const supabase = useMemo(() => createClient(), [])
-  const { toast, showToast, hideToast } = useToast()
+  const { showToast } = useToastContext()
 
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
@@ -76,8 +131,11 @@ function EditorContent() {
   const [isPublished, setIsPublished] = useState(false)
   const [pageId, setPageId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [slugError, setSlugError] = useState<string | null>(null)
+
+  // saving 상태를 ref로 관리하여 리렌더링 방지
+  const savingRef = useRef(false)
+  const [savingDisplay, setSavingDisplay] = useState(false)
 
   // 페이지 로드
   useEffect(() => {
@@ -111,25 +169,25 @@ function EditorContent() {
   }, [slugParam, supabase, showToast])
 
   // 제목 변경 시 slug 자동 생성
-  const handleTitleChange = (newTitle: string) => {
+  const handleTitleChange = useCallback((newTitle: string) => {
     setTitle(newTitle)
-    if (!pageId) {
-      setSlug(slugify(newTitle))
-    }
-  }
+    setSlug(prev => pageId ? prev : slugify(newTitle))
+  }, [pageId])
 
   // Slug 유효성 검사
-  const handleSlugChange = (newSlug: string) => {
+  const handleSlugChange = useCallback((newSlug: string) => {
     setSlug(newSlug)
     if (newSlug && !isValidSlug(newSlug)) {
       setSlugError('영문 소문자, 숫자, 하이픈만 허용됩니다.')
     } else {
       setSlugError(null)
     }
-  }
+  }, [])
 
   // 저장
   const handleSave = useCallback(async () => {
+    if (savingRef.current) return
+
     if (!title.trim() || !slug.trim() || !htmlContent.trim()) {
       showToast('제목, slug, 내용을 모두 입력해주세요.', 'error')
       return
@@ -140,12 +198,15 @@ function EditorContent() {
       return
     }
 
-    setSaving(true)
+    savingRef.current = true
+    setSavingDisplay(true)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       showToast('로그인이 필요합니다.', 'error')
       router.push('/login')
+      savingRef.current = false
+      setSavingDisplay(false)
       return
     }
 
@@ -166,7 +227,8 @@ function EditorContent() {
         } else {
           showToast('저장에 실패했습니다.', 'error')
         }
-        setSaving(false)
+        savingRef.current = false
+        setSavingDisplay(false)
         return
       }
     } else {
@@ -188,7 +250,8 @@ function EditorContent() {
         } else {
           showToast('저장에 실패했습니다.', 'error')
         }
-        setSaving(false)
+        savingRef.current = false
+        setSavingDisplay(false)
         return
       }
 
@@ -197,7 +260,8 @@ function EditorContent() {
     }
 
     showToast('저장되었습니다!', 'success')
-    setSaving(false)
+    savingRef.current = false
+    setSavingDisplay(false)
   }, [title, slug, htmlContent, pageId, supabase, router, showToast])
 
   // Ctrl+S 저장
@@ -214,7 +278,9 @@ function EditorContent() {
   }, [handleSave])
 
   // 게시
-  const handlePublish = async () => {
+  const handlePublish = useCallback(async () => {
+    if (savingRef.current) return
+
     if (!pageId) {
       await handleSave()
     }
@@ -224,7 +290,8 @@ function EditorContent() {
       return
     }
 
-    setSaving(true)
+    savingRef.current = true
+    setSavingDisplay(true)
 
     const { error } = await supabase
       .from('pages')
@@ -233,20 +300,23 @@ function EditorContent() {
 
     if (error) {
       showToast('게시에 실패했습니다.', 'error')
-      setSaving(false)
+      savingRef.current = false
+      setSavingDisplay(false)
       return
     }
 
     setIsPublished(true)
     showToast('게시되었습니다!', 'success')
-    setSaving(false)
-  }
+    savingRef.current = false
+    setSavingDisplay(false)
+  }, [pageId, title, supabase, showToast, handleSave])
 
   // 게시 취소
-  const handleUnpublish = async () => {
-    if (!pageId) return
+  const handleUnpublish = useCallback(async () => {
+    if (!pageId || savingRef.current) return
 
-    setSaving(true)
+    savingRef.current = true
+    setSavingDisplay(true)
 
     const { error } = await supabase
       .from('pages')
@@ -255,38 +325,45 @@ function EditorContent() {
 
     if (error) {
       showToast('게시 취소에 실패했습니다.', 'error')
-      setSaving(false)
+      savingRef.current = false
+      setSavingDisplay(false)
       return
     }
 
     setIsPublished(false)
     showToast('게시가 취소되었습니다.', 'info')
-    setSaving(false)
-  }
+    savingRef.current = false
+    setSavingDisplay(false)
+  }, [pageId, supabase, showToast])
 
   // 새 문서
-  const handleNew = () => {
+  const handleNew = useCallback(() => {
     setPageId(null)
     setTitle('')
     setSlug('')
     setHtmlContent('')
     setIsPublished(false)
     router.replace('/editor')
-  }
+  }, [router])
 
   // 로그아웃
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
-  }
+  }, [supabase, router])
 
   // URL 복사
-  const handleCopyUrl = () => {
+  const handleCopyUrl = useCallback(() => {
     const url = `${window.location.origin}/p/${slug}`
     navigator.clipboard.writeText(url)
     showToast('URL이 복사되었습니다!', 'success')
-  }
+  }, [slug, showToast])
+
+  // HTML 변경 핸들러
+  const handleHtmlChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setHtmlContent(e.target.value)
+  }, [])
 
   if (loading) {
     return (
@@ -301,10 +378,6 @@ function EditorContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
-      )}
-
       {/* 헤더 */}
       <header className="header-gradient text-white px-6 py-4 shadow-lg">
         <div className="flex items-center justify-between">
@@ -379,17 +452,17 @@ function EditorContent() {
           <div className="flex items-center gap-3 pt-5">
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={savingDisplay}
               className="btn btn-primary"
             >
               <SaveIcon />
-              {saving ? '저장 중...' : '저장'}
+              {savingDisplay ? '저장 중...' : '저장'}
             </button>
 
             {!isPublished ? (
               <button
                 onClick={handlePublish}
-                disabled={saving || !pageId}
+                disabled={savingDisplay || !pageId}
                 className="btn btn-success disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <PublishIcon />
@@ -398,7 +471,7 @@ function EditorContent() {
             ) : (
               <button
                 onClick={handleUnpublish}
-                disabled={saving}
+                disabled={savingDisplay}
                 className="btn btn-warning"
               >
                 게시 취소
@@ -445,7 +518,7 @@ function EditorContent() {
           </div>
           <textarea
             value={htmlContent}
-            onChange={(e) => setHtmlContent(e.target.value)}
+            onChange={handleHtmlChange}
             className="flex-1 p-4 resize-none focus:outline-none code-editor"
             placeholder="<!DOCTYPE html>
 <html>
@@ -460,17 +533,8 @@ function EditorContent() {
           />
         </div>
 
-        {/* 미리보기 */}
-        <div className="w-1/2 card overflow-hidden flex flex-col">
-          <div className="panel-header">
-            <EyeIcon />
-            <span className="panel-header-title">미리보기</span>
-            <span className="ml-auto badge badge-info text-xs">실시간</span>
-          </div>
-          <div className="flex-1 bg-white">
-            <PreviewFrame htmlContent={htmlContent} />
-          </div>
-        </div>
+        {/* 미리보기 - 별도 컴포넌트로 격리 */}
+        <PreviewPanel htmlContent={htmlContent} />
       </div>
     </div>
   )
@@ -478,15 +542,17 @@ function EditorContent() {
 
 export default function EditorPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="card p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-500">로딩 중...</p>
+    <ToastProvider>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="card p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent mx-auto mb-4"></div>
+            <p className="text-gray-500">로딩 중...</p>
+          </div>
         </div>
-      </div>
-    }>
-      <EditorContent />
-    </Suspense>
+      }>
+        <EditorContent />
+      </Suspense>
+    </ToastProvider>
   )
 }
