@@ -1,34 +1,25 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, memo } from 'react'
 
 interface PreviewFrameProps {
   htmlContent: string
   className?: string
 }
 
-export default function PreviewFrame({ htmlContent, className = '' }: PreviewFrameProps) {
+function PreviewFrameInner({ htmlContent, className = '' }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [debouncedHtml, setDebouncedHtml] = useState(htmlContent)
+  const prevHtmlRef = useRef<string>('')
   const prevUrlRef = useRef<string | null>(null)
-
-  // 디바운스: 타이핑 멈춘 후 300ms 후에 업데이트
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedHtml(htmlContent)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [htmlContent])
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   // 완전한 HTML 문서가 아닌 경우에만 기본 래퍼 추가
-  const hasDoctype = /<!DOCTYPE/i.test(debouncedHtml)
-  const hasHtmlTag = /<html/i.test(debouncedHtml)
+  const getFullHtml = (html: string) => {
+    const hasDoctype = /<!DOCTYPE/i.test(html)
+    const hasHtmlTag = /<html/i.test(html)
 
-  let fullHtml = debouncedHtml
-
-  if (!hasDoctype && !hasHtmlTag) {
-    fullHtml = `<!DOCTYPE html>
+    if (!hasDoctype && !hasHtmlTag) {
+      return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -36,33 +27,56 @@ export default function PreviewFrame({ htmlContent, className = '' }: PreviewFra
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-${debouncedHtml}
+${html}
 </body>
 </html>`
+    }
+    return html
   }
 
   useEffect(() => {
-    const iframe = iframeRef.current
-    if (!iframe || !fullHtml) return
-
-    // 이전 URL 해제
-    if (prevUrlRef.current) {
-      URL.revokeObjectURL(prevUrlRef.current)
+    // 디바운스 처리
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
     }
 
-    // blob URL을 사용하여 CSP 우회
-    const blob = new Blob([fullHtml], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    prevUrlRef.current = url
-    iframe.src = url
+    debounceRef.current = setTimeout(() => {
+      const iframe = iframeRef.current
+      if (!iframe) return
 
+      const fullHtml = getFullHtml(htmlContent)
+
+      // HTML이 실제로 변경된 경우에만 업데이트
+      if (fullHtml === prevHtmlRef.current) return
+      prevHtmlRef.current = fullHtml
+
+      // 이전 URL 해제
+      if (prevUrlRef.current) {
+        URL.revokeObjectURL(prevUrlRef.current)
+      }
+
+      // blob URL을 사용
+      const blob = new Blob([fullHtml], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      prevUrlRef.current = url
+      iframe.src = url
+    }, 500)
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [htmlContent])
+
+  // 컴포넌트 언마운트 시 URL 정리
+  useEffect(() => {
     return () => {
       if (prevUrlRef.current) {
         URL.revokeObjectURL(prevUrlRef.current)
-        prevUrlRef.current = null
       }
     }
-  }, [fullHtml])
+  }, [])
 
   return (
     <iframe
@@ -72,3 +86,11 @@ ${debouncedHtml}
     />
   )
 }
+
+// memo로 감싸서 불필요한 리렌더링 방지
+const PreviewFrame = memo(PreviewFrameInner, (prevProps, nextProps) => {
+  // htmlContent가 같으면 리렌더링하지 않음
+  return prevProps.htmlContent === nextProps.htmlContent
+})
+
+export default PreviewFrame
