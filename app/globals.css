@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #4F46E5;
+  --primary-light: #6366F1;
+  --primary-dark: #4338CA;
+  --secondary: #10B981;
+  --accent: #F59E0B;
+  --danger: #EF4444;
+  --bg-gradient-start: #667eea;
+  --bg-gradient-end: #764ba2;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #e0e7ff 0%, #f0e6ff 50%, #fce7f3 100%);
+  min-height: 100vh;
+}
+
+/* 에디터 textarea 스타일 */
+.code-editor {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  tab-size: 2;
+  background: #1e1e2e;
+  color: #cdd6f4;
+}
+
+/* 카드 스타일 */
+.card {
+  @apply bg-white rounded-2xl shadow-lg border border-gray-100;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+}
+
+/* 버튼 스타일 */
+.btn {
+  @apply px-4 py-2 rounded-xl font-medium transition-all duration-200 flex items-center gap-2;
+}
+
+.btn-primary {
+  @apply bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+}
+
+.btn-success {
+  @apply bg-emerald-500 text-white hover:bg-emerald-600 shadow-md hover:shadow-lg;
+}
+
+.btn-danger {
+  @apply bg-red-500 text-white hover:bg-red-600;
+}
+
+.btn-warning {
+  @apply bg-amber-500 text-white hover:bg-amber-600;
+}
+
+/* 입력 필드 스타일 */
+.input-field {
+  @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white;
+}
+
+/* 그라디언트 헤더 */
+.header-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 상태 뱃지 */
+.badge {
+  @apply px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.badge-success {
+  @apply bg-emerald-100 text-emerald-700;
+}
+
+.badge-warning {
+  @apply bg-amber-100 text-amber-700;
+}
+
+.badge-info {
+  @apply bg-blue-100 text-blue-700;
+}
+
+/* 토스트 애니메이션 */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.toast-enter {
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast-exit {
+  animation: slideOut 0.3s ease-in;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 에디터/미리보기 분할 */
+.editor-panel {
+  @apply flex flex-col h-full;
+}
+
+.panel-header {
+  @apply px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex items-center gap-2;
+}
+
+.panel-header-icon {
+  @apply w-5 h-5 text-gray-500;
+}
+
+.panel-header-title {
+  @apply text-sm font-semibold text-gray-700;
+}
